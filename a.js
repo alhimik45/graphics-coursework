@@ -287,6 +287,7 @@ let sorts = {
   "Сортировка выбором": "selectionSort",
   "Сортировка Шелла": "shellSort",
   "Сортировка слиянием": "mergeSort",
+  "Быстрая сортировка": "quickSort",
 }
 
 Object.entries(sorts).forEach(e => {
@@ -418,8 +419,6 @@ let mergeSort = function* (len) {
   }
 
   function* merge (from, pivot, to) {
-    if (pivot == 10)
-      debugger;
     let ap = yield { type: 'eye', i: pivot, n: 0 }
     let ap1 = yield { type: 'eye', i: pivot - 1, n: 0 }
     if (from < pivot && pivot < to && ap < ap1) {
@@ -455,4 +454,37 @@ let mergeSort = function* (len) {
   }
 
   yield *mergeSort(0, len)
+}
+
+let quickSort = function* (len) {
+  function* quicksort (left, right) {
+
+    if (left < right) {
+      let pivot = yield { type: 'eye', i: left + Math.floor((right - left) / 2), n: 0 }
+      let left_new = left,
+        right_new = right
+
+      do {
+        let ln = yield { type: 'eye', i: left_new, n: 0 }
+        while (ln < pivot) {
+          left_new += 1
+          ln = yield { type: 'eye', i: left_new, n: 0 }
+        }
+        let rn = yield { type: 'eye', i: right_new, n: 1 }
+        while (pivot < rn) {
+          right_new -= 1
+          rn = yield { type: 'eye', i: right_new, n: 1 }
+        }
+        if (left_new <= right_new) {
+          yield { type: 'swap', i: left_new, j: right_new }
+          left_new += 1
+          right_new -= 1
+        }
+      } while (left_new <= right_new)
+      yield* quicksort(left, right_new)
+      yield* quicksort(left_new, right)
+    }
+  }
+
+  yield * quicksort(0, len - 1)
 }

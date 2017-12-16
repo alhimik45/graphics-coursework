@@ -41,6 +41,7 @@ let canvas = new fabric.Canvas('cnv')
 
 class Elem {
   constructor (count, i, colors) {
+    this.i = i
     this.rect = new fabric.Rect({
       width: (canvas.width - 50) / count,
       height: (300 / count) * i + 10,
@@ -81,7 +82,7 @@ let genArr = count => {
 }
 
 let quadBesier = async (x1, x2, y) => {
-  let path = new fabric.Path(`C ${x1} ${y} ${(x1 + x2) / 2} ${y + 100} ${x2} ${y}`, {
+  let path = new fabric.Path(`C ${x1} ${y} ${(x1 + x2) / 2} ${y - 100} ${x2} ${y}`, {
     left: 0,
     top: 0,
     stroke: 'black',
@@ -120,7 +121,7 @@ let swap = async (arr, i, j) => {
   let b = await quadBesier(
     e1.rect.left + e1.rect.width / 2,
     e2.rect.left + e2.rect.width / 2,
-    canvas.height - 290)
+    canvas.height - 610)
   let aniSwap = async (e1, e2) => {
     await move(e1.rect, 'top', e1.rect.top + 25, 300)
     await move(e1.rect, 'left', e2.rect.left, Math.abs(i - j) * 900 / arr.length + 300)
@@ -183,4 +184,40 @@ let eye = async (arr, i, n) => {
     move(e, 'left', e.newLeft(arr[i].rect), 500)
 }
 
-arr = genArr(100)
+let arr = []
+
+let sortInterpreter = async gen => {
+  let r = gen.next()
+  while (!r.done) {
+    let val = r.value
+    switch (val.type) {
+      case 'eye':
+        await eye(arr, val.i, val.n)
+        r = gen.next(arr[val.i].i)
+        break;
+      case 'swap':
+        await swap(arr, val.i, val.j)
+        r = gen.next()
+        break;
+    }
+  }
+  Object.values(eyes).forEach(e => canvas.remove(e))
+  canvas.renderAll()
+}
+
+arr = genArr(5)
+
+let bubbleSort = function* (length) {
+  let swapped
+  do {
+    swapped = false;
+    for (let i = 0; i < length - 1; i++) {
+      let ai = yield {type:'eye', i, n: 0}
+      let ai1 = yield {type:'eye', i: i+1, n: 1}
+      if (ai > ai1) {
+        yield {type:'swap', i: i, j: i+1}
+        swapped = true
+      }
+    }
+  } while (swapped)
+}

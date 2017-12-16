@@ -322,10 +322,11 @@ let bubbleSort = function* (length) {
 
 let insertionSort = function* (len) {
   for (let i = 1; i < len; i++) {
+    let j
     let tmp = yield { type: 'eye', i, n: 0 }
     tmp = yield { type: 'stmp', i }
     let uj = yield { type: 'eye', i: i - 1, n: 1 }
-    for (var j = i - 1; j >= 0 && (uj > tmp);) {
+    for (j = i - 1; j >= 0 && (uj > tmp);) {
       yield { type: 'move', from: j, to: j + 1 }
       --j
       if (j >= 0)

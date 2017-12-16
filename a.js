@@ -1,6 +1,5 @@
 let MAX_RGB = 255
 let NUM_SECTIONS = 6
-let animPending = false
 let getRColor = index => {
   let section = Math.floor(index * NUM_SECTIONS)
   let start = (index - (section / NUM_SECTIONS)) * NUM_SECTIONS
@@ -112,9 +111,17 @@ let move = (e, meth, to, dur) =>
     })
   })
 
+let delayer = (i, j) => Math.abs(i - j) * 900 / arr.length + 300
+
+let mover = async (arr, i, j) => {
+  let e = arr[i]
+  e.rect.bringToFront()
+  await move(e.rect, 'left', j * e.rect.width, delayer(i, j))
+  e.rect.sendToBack()
+  arr[j] = arr[i]
+}
+
 let swap = async (arr, i, j) => {
-  if (animPending) return;
-  animPending = true;
   [arr[i], arr[j]] = [arr[j], arr[i]]
   let e1 = arr[i > j ? i : j]
   let e2 = arr[i > j ? j : i]
@@ -126,14 +133,39 @@ let swap = async (arr, i, j) => {
     canvas.height - 470)
   let aniSwap = async (e1, e2) => {
     await move(e1.rect, 'top', e1.rect.top + 25, 300)
-    await move(e1.rect, 'left', e2.rect.left, Math.abs(i - j) * 900 / arr.length + 300)
+    await move(e1.rect, 'left', e2.rect.left, delayer(i, j))
     await move(e1.rect, 'top', e1.rect.top - 25, 300)
   }
   await Promise.all([aniSwap(e1, e2), aniSwap(e2, e1)])
   e1.rect.sendToBack()
   e2.rect.sendToBack()
   await hide(b)
-  animPending = false
+}
+
+let tmp
+let tmpI
+let toTemp = async (arr, i) => {
+  let e = arr[i]
+  tmpI = i
+  await move(e.rect, 'top', e.rect.top - 300, 500)
+  tmp = e
+}
+
+let fromTemp = async (arr, i) => {
+  tmp.rect.bringToFront()
+  let ll = i * tmp.rect.width
+  let b
+  if(tmpI !== i)
+  b = await quadBesier(
+    ll + tmp.rect.width / 2,
+    tmp.rect.left + tmp.rect.width / 2,
+    canvas.height - 470)
+  await move(tmp.rect, 'left', ll, delayer(tmpI, i))
+  await move(tmp.rect, 'top', tmp.rect.top + 300, 500)
+  tmp.rect.sendToBack()
+  arr[i] = tmp
+  b && await hide(b)
+  tmp = null
 }
 
 let eyes = {}
@@ -194,7 +226,7 @@ let sortInterpreter = async gen => {
   document.querySelectorAll(".be").forEach(b => b.disabled = true)
   gen = gen(arr.length)
   let r = gen.next()
-  while (!r.done && workHard) {
+  while (!r.done && (workHard || tmp)) {
     let val = r.value
     switch (val.type) {
       case 'eye':
@@ -203,6 +235,18 @@ let sortInterpreter = async gen => {
         break;
       case 'swap':
         await swap(arr, val.i, val.j)
+        r = gen.next()
+        break;
+      case 'move':
+        await mover(arr, val.from, val.to)
+        r = gen.next()
+        break;
+      case 'stmp':
+        await toTemp(arr, val.i)
+        r = gen.next(tmp.i)
+        break;
+      case 'ltmp':
+        await fromTemp(arr, val.i)
         r = gen.next()
         break;
     }
@@ -214,26 +258,26 @@ let sortInterpreter = async gen => {
   document.querySelectorAll(".be").forEach(b => b.disabled = false)
 }
 
-
 let createArr = () => {
   let size = document.querySelector("#arr").value
-  if(size <= 0) {
+  if (size <= 0) {
     alert("Неверный размер!")
   }
   arr = genArr(+size)
 }
 
 let sorts = {
-  "Пузырьковая сортировка": "bubbleSort"
+  "Пузырьковая сортировка": "bubbleSort",
+  "Сортировка вставками": "insertionSort",
 }
 
-Object.entries(sorts).forEach(e =>{
-  let t= document.querySelector("#tab")
+Object.entries(sorts).forEach(e => {
+  let t = document.querySelector("#tab")
   t.innerHTML += `<tr><td><button class='be' onclick='sortInterpreter(${e[1]})'>${e[0]}</button></td></tr>`
 })
 
 let changeSpeed = sp => {
-  animationSpeed = 1/sp;
+  animationSpeed = 1 / sp;
 }
 
 let bubbleSort = function* (length) {
@@ -241,12 +285,27 @@ let bubbleSort = function* (length) {
   do {
     swapped = false;
     for (let i = 0; i < length - 1; i++) {
-      let ai = yield {type:'eye', i, n: 0}
-      let ai1 = yield {type:'eye', i: i+1, n: 1}
+      let ai = yield { type: 'eye', i, n: 0 }
+      let ai1 = yield { type: 'eye', i: i + 1, n: 1 }
       if (ai > ai1) {
-        yield {type:'swap', i: i, j: i+1}
+        yield { type: 'swap', i: i, j: i + 1 }
         swapped = true
       }
     }
   } while (swapped)
+}
+
+let insertionSort = function* (len) {
+  for (let i = 1; i < len; i++) {
+    let tmp = yield { type: 'eye', i, n: 0 }
+    tmp = yield { type: 'stmp', i }
+    let uj = yield { type: 'eye', i: i - 1, n: 1 }
+    for (var j = i - 1; j >= 0 && (uj > tmp);) {
+      yield { type: 'move', from: j, to: j + 1 }
+      --j;
+      if (j >= 0)
+        uj = yield { type: 'eye', i: j, n: 1 }
+    }
+    yield { type: 'ltmp', i: j + 1 }
+  }
 }

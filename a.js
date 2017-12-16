@@ -45,7 +45,7 @@ class Elem {
       width: (canvas.width - 50) / count,
       height: (300 / count) * i + 10,
       left: 0,
-      top: canvas.height - 100 - (300 / count) * i - 10,
+      top: canvas.height - 300 - (300 / count) * i - 10,
       selectable: false
     })
 
@@ -64,6 +64,7 @@ class Elem {
 }
 
 let genArr = count => {
+  eyes = {}
   canvas.clear()
   let arr = []
   let colors = getRColors(count + 15)
@@ -79,34 +80,32 @@ let genArr = count => {
   return arr
 }
 
-let drawBesier = async (x1, x2, y) =>
-  new Promise(resolve => {
-    let path = new fabric.Path(`C ${x1} ${y} ${(x1 + x2) / 2} ${y + 100} ${x2} ${y}`, {
-      left: 0,
-      top: 0,
-      stroke: 'black',
-      strokeWidth: 2,
-      fill: false,
-      selectable: false
-    })
-    path.opacity = 0
-    canvas.add(path)
-    path.animate('opacity', '1', {
-      duration: 300,
-      onChange: () => canvas.renderAll(),
-      onComplete: () => resolve(path)
-    })
+let quadBesier = async (x1, x2, y) => {
+  let path = new fabric.Path(`C ${x1} ${y} ${(x1 + x2) / 2} ${y + 100} ${x2} ${y}`, {
+    left: 0,
+    top: 0,
+    stroke: 'black',
+    strokeWidth: 2,
+    fill: false,
+    selectable: false
   })
+  path.opacity = 0
+  canvas.add(path)
+  await move(path, 'opacity', 1)
+  return path
+}
 
-let hide = async elem =>
+let hide = async elem => {
+  await move(elem, 'opacity', 0)
+  canvas.remove(elem)
+}
+
+let move = (e, meth, to, dur) =>
   new Promise(resolve => {
-    elem.animate('opacity', '0', {
-      duration: 300,
+    e.animate(meth, to, {
+      duration: dur,
       onChange: () => canvas.renderAll(),
-      onComplete: () => {
-        canvas.remove(elem)
-        resolve()
-      }
+      onComplete: resolve
     })
   })
 
@@ -118,31 +117,70 @@ let swap = async (arr, i, j) => {
   let e2 = arr[i > j ? j : i]
   e1.rect.bringToFront()
   e2.rect.bringToFront()
-  let b = await drawBesier(
+  let b = await quadBesier(
     e1.rect.left + e1.rect.width / 2,
     e2.rect.left + e2.rect.width / 2,
-    canvas.height - 90)
-  let aniSwap = (e1, e2) =>
-    new Promise((resolve) => {
-      e1.rect.animate('top', e1.rect.top + 25, {
-        duration: 300,
-        onChange: () => canvas.renderAll(),
-        onComplete: () => e1.rect.animate('left', e2.rect.left, {
-          duration: Math.abs(i - j) * 900 / arr.length + 300,
-          onChange: () => canvas.renderAll(),
-          onComplete: () => e1.rect.animate('top', e1.rect.top - 25, {
-            duration: 300,
-            onChange: () => canvas.renderAll(),
-            onComplete: () => resolve()
-          })
-        })
-      })
-    })
-
+    canvas.height - 290)
+  let aniSwap = async (e1, e2) => {
+    await move(e1.rect, 'top', e1.rect.top + 25, 300)
+    await move(e1.rect, 'left', e2.rect.left, Math.abs(i - j) * 900 / arr.length + 300)
+    await move(e1.rect, 'top', e1.rect.top - 25, 300)
+  }
   await Promise.all([aniSwap(e1, e2), aniSwap(e2, e1)])
   e1.rect.sendToBack()
   e2.rect.sendToBack()
   await hide(b)
   animPending = false
 }
-arr = genArr(20)
+
+let eyes = {}
+
+let eyeImg = null
+
+fabric.loadSVGFromURL('eye.svg', (objects, options) => {
+  eyeImg = fabric.util.groupSVGElements(objects, options)
+})
+
+let getEye = n => {
+  let e = fabric.util.object.clone(eyeImg)
+  let path = new fabric.Path(`C 5 10 5 20 5 70`, {
+    left: 0,
+    top: -90,
+    stroke: `rgb(${(n & 1) * 255},${(n & 2) * 255},${(n & 4) * 255})`,
+    strokeWidth: 2,
+    fill: false,
+    selectable: false
+  })
+  let s = 20 / e.width
+  e.scaleX = s
+  e.scaleY = s
+  let g = new fabric.Group([path, e])
+  g.selectable = false
+  g.top = canvas.height - 290
+  g.newLeft = r => r.left + (r.width - e.width * s) / 2
+  return g
+}
+
+let eye = async (arr, i, n) => {
+  let e
+  if (i < 0 || i >= arr.length) {
+    if (eyes[n]) {
+      e = eyes[n]
+      delete eyes[n]
+      canvas.remove(e)
+      canvas.renderAll()
+    }
+    return
+  }
+  if (eyes[n]) {
+    e = eyes[n]
+  } else {
+    e = eyes[n] = getEye(n)
+    e.left = e.newLeft(arr[i].rect)
+    canvas.add(e)
+  }
+  await
+    move(e, 'left', e.newLeft(arr[i].rect), 500)
+}
+
+arr = genArr(100)

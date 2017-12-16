@@ -8,16 +8,38 @@
   <script src='lodash.js'></script>
 </head>
 <body>
-<canvas id="cnv" width="1500" height="600"></canvas>
-<!--<button onclick='draw()'>All</button>-->
-<!--<button onclick='drawL(++c)'>Next line</button>-->
-<!--<button onclick='drawL(++c);drawL(++c);drawL(++c);drawL(++c);drawL(++c);drawL(++c);drawL(++c);drawL(++c);drawL(++c);drawL(++c);'>Next 10 lines</button>-->
-<!--<p>Активные полигоны</p>-->
-<!--<div id='active'></div>-->
-<!--<p>Активные ребра</p>-->
-<!--<div id='activeL'></div>-->
-<!--<p>Z-buffer</p>-->
-<!--<div id='zb'></div>-->
+<canvas id="cnv" width="1500" height="460"></canvas>
+<table>
+  <tr>
+    <td>
+      <table>
+        <tr>
+          <td>Размер массива: <input type='text' id='arr' value='25'>
+            <button class="be" onclick='createArr()'>Создать массив</button>
+          </td>
+        </tr>
+        <tr>
+          <td>
+            <button onclick='workHard = false'>Остановить сортировку</button>
+          </td>
+        </tr>
+        <tr>
+          <td>Скорость анимации: <input type='range' min='1' max='25' value='1' onchange='changeSpeed(this.value)'></td>
+        </tr>
+      </table>
+    </td>
+    <td>&NonBreakingSpace;&NonBreakingSpace;&NonBreakingSpace;&NonBreakingSpace;&NonBreakingSpace;</td>
+    <td>&NonBreakingSpace;&NonBreakingSpace;&NonBreakingSpace;&NonBreakingSpace;&NonBreakingSpace;</td>
+    <td>&NonBreakingSpace;&NonBreakingSpace;&NonBreakingSpace;&NonBreakingSpace;&NonBreakingSpace;</td>
+    <td>&NonBreakingSpace;&NonBreakingSpace;&NonBreakingSpace;&NonBreakingSpace;&NonBreakingSpace;</td>
+    <td>&NonBreakingSpace;&NonBreakingSpace;&NonBreakingSpace;&NonBreakingSpace;&NonBreakingSpace;</td>
+    <td>
+      <table  id='tab'>
+
+      </table>
+    </td>
+  </tr>
+</table>
 <script src='a.js'></script>
 </body>
 </html>

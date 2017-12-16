@@ -37,7 +37,7 @@ let getRColors = numberOfColors => {
   return rainbow
 }
 
-let canvas = new fabric.Canvas('cnv')
+let canvas = new fabric.StaticCanvas('cnv')
 
 class Elem {
   constructor (count, i, colors) {
@@ -46,7 +46,7 @@ class Elem {
       width: (canvas.width - 50) / count,
       height: (300 / count) * i + 10,
       left: 0,
-      top: canvas.height - 300 - (300 / count) * i - 10,
+      top: canvas.height - 110 - (300 / count) * i - 10,
       selectable: false
     })
 
@@ -92,19 +92,21 @@ let quadBesier = async (x1, x2, y) => {
   })
   path.opacity = 0
   canvas.add(path)
-  await move(path, 'opacity', 1)
+  await move(path, 'opacity', 1, 300)
   return path
 }
 
 let hide = async elem => {
-  await move(elem, 'opacity', 0)
+  await move(elem, 'opacity', 0, 300)
   canvas.remove(elem)
 }
+
+let animationSpeed = 1
 
 let move = (e, meth, to, dur) =>
   new Promise(resolve => {
     e.animate(meth, to, {
-      duration: dur,
+      duration: dur * animationSpeed,
       onChange: () => canvas.renderAll(),
       onComplete: resolve
     })
@@ -121,7 +123,7 @@ let swap = async (arr, i, j) => {
   let b = await quadBesier(
     e1.rect.left + e1.rect.width / 2,
     e2.rect.left + e2.rect.width / 2,
-    canvas.height - 610)
+    canvas.height - 470)
   let aniSwap = async (e1, e2) => {
     await move(e1.rect, 'top', e1.rect.top + 25, 300)
     await move(e1.rect, 'left', e2.rect.left, Math.abs(i - j) * 900 / arr.length + 300)
@@ -157,7 +159,7 @@ let getEye = n => {
   e.scaleY = s
   let g = new fabric.Group([path, e])
   g.selectable = false
-  g.top = canvas.height - 290
+  g.top = canvas.height - 110
   g.newLeft = r => r.left + (r.width - e.width * s) / 2
   return g
 }
@@ -185,10 +187,14 @@ let eye = async (arr, i, n) => {
 }
 
 let arr = []
+let workHard
 
 let sortInterpreter = async gen => {
+  workHard = true
+  document.querySelectorAll(".be").forEach(b => b.disabled = true)
+  gen = gen(arr.length)
   let r = gen.next()
-  while (!r.done) {
+  while (!r.done && workHard) {
     let val = r.value
     switch (val.type) {
       case 'eye':
@@ -201,11 +207,12 @@ let sortInterpreter = async gen => {
         break;
     }
   }
+  workHard = true
   Object.values(eyes).forEach(e => canvas.remove(e))
+  eyes = {}
   canvas.renderAll()
+  document.querySelectorAll(".be").forEach(b => b.disabled = false)
 }
-
-arr = genArr(5)
 
 let bubbleSort = function* (length) {
   let swapped
@@ -220,4 +227,26 @@ let bubbleSort = function* (length) {
       }
     }
   } while (swapped)
+}
+
+
+let createArr = () => {
+  let size = document.querySelector("#arr").value
+  if(size <= 0) {
+    alert("Неверный размер!")
+  }
+  arr = genArr(+size)
+}
+
+let sorts = {
+  "Пузырьковая сортировка": "bubbleSort"
+}
+
+Object.entries(sorts).forEach(e =>{
+  let t= document.querySelector("#tab")
+  t.innerHTML += `<tr><td><button class='be' onclick='sortInterpreter(${e[1]})'>${e[0]}</button></td></tr>`
+})
+
+let changeSpeed = sp => {
+  animationSpeed = 1/sp;
 }

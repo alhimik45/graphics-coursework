@@ -148,7 +148,7 @@ let swap = async (arr, i, j) => {
     let was = false
     if (animationSpeed >= 1 / 20) {
       await move(e1.rect, 'top', e1.rect.top + 25, 300)
-      was =true
+      was = true
     }
     await move(e1.rect, 'left', e2.rect.left, delayer(i, j))
     if (animationSpeed >= 1 / 20 && was)

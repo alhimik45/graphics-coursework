@@ -270,6 +270,7 @@ let sorts = {
   "Пузырьковая сортировка": "bubbleSort",
   "Сортировка вставками": "insertionSort",
   "Сортировка выбором": "selectionSort",
+  "Сортировка Шелла": "shellSort",
 }
 
 Object.entries(sorts).forEach(e => {
@@ -329,6 +330,24 @@ let selectionSort = function* (len) {
 
     if (i !== min) {
       yield { type: 'swap', i: i, j: min }
+    }
+  }
+}
+
+let shellSort = function* (len) {
+  for (let h = len; h > 0; h = parseInt(h / 2)) {
+    for (let i = h; i < len; i++) {
+      let j
+      let k = yield { type: 'eye', i: i, n: 0 }
+      k = yield { type: 'stmp', i: i }
+      let ajh = yield { type: 'eye', i: i-h, n: 1 }
+      for (j = i; j >= h && k < ajh; ) {
+        yield { type: 'move', from: j-h, to: j }
+        j -= h
+        if(j>=h)
+          ajh = yield { type: 'eye', i: j-h, n: 1 }
+      }
+      yield { type: 'ltmp', i: j }
     }
   }
 }

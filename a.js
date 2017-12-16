@@ -1,7 +1,6 @@
 let MAX_RGB = 255
 let NUM_SECTIONS = 6
-let ELEM_HEIGHT = 200
-
+let animPending = false
 let getRColor = index => {
   let section = Math.floor(index * NUM_SECTIONS)
   let start = (index - (section / NUM_SECTIONS)) * NUM_SECTIONS
@@ -34,56 +33,19 @@ let getRColor = index => {
 
 let getRColors = numberOfColors => {
   let rainbow = []
-  for (let i = 0; i < numberOfColors; ++i) {
-    rainbow[i] = getRColor(i / numberOfColors)
-  }
+  _(numberOfColors).times(i => rainbow[i] = getRColor(i / numberOfColors))
   return rainbow
 }
 
 let canvas = new fabric.Canvas('cnv')
 
-// let rect = new fabric.Rect({
-//   width: 50,
-//   height: 200,
-//   left: 100,
-//   top: 100,
-//   selectable: false
-// })
-//
-// rect.setGradient('fill', {
-//   type: 'linear',
-//   x1: -rect.width / 2,
-//   y1: 0,
-//   x2: rect.width / 2,
-//   y2: 0,
-//   colorStops: {
-//     0: '#ffe47b',
-//     1: 'rgb(111,154,211)'
-//   }
-// })
-//
-// canvas.add(rect)
-//
-// let code = function () {
-//   rect.animate('left', rect.left === 100 ? 400 : 100, {
-//     duration: 1000,
-//     onChange: canvas.renderAll.bind(canvas),
-//     onComplete: function () {
-//       setTimeout(code, 1000)
-//     },
-//     easing: fabric.util.ease["easeOutQuint"]
-//   })
-// }
-// setTimeout(code, 1000)
-
-
 class Elem {
   constructor (count, i, colors) {
     this.rect = new fabric.Rect({
-      width: (canvas.width-50) / count,
-      height: (300 / count)*i,
+      width: (canvas.width - 50) / count,
+      height: (300 / count) * i + 10,
       left: 0,
-      top: canvas.height - 100-(300 / count)*i,
+      top: canvas.height - 100 - (300 / count) * i - 10,
       selectable: false
     })
 
@@ -95,7 +57,7 @@ class Elem {
       y2: 0,
       colorStops: {
         0: colors[i],
-        1: colors[i+1]
+        1: colors[i + 1]
       }
     })
   }
@@ -104,18 +66,83 @@ class Elem {
 let genArr = count => {
   canvas.clear()
   let arr = []
-  let colors = getRColors(count+15)
+  let colors = getRColors(count + 15)
   _(count).times(n => {
     let e = new Elem(count, n, colors)
     arr.push(e)
   })
-  // arr = _.shuffle(arr)
-  arr.forEach((e,i) => {
-    e.rect.left = i*e.rect.width;
-    canvas.add(e.rect);
+  arr = _.shuffle(arr)
+  arr.forEach((e, i) => {
+    e.rect.left = i * e.rect.width
+    canvas.add(e.rect)
   })
   return arr
 }
 
-let swap
+let drawBesier = async (x1, x2, y) =>
+  new Promise(resolve => {
+    let path = new fabric.Path(`C ${x1} ${y} ${(x1 + x2) / 2} ${y + 100} ${x2} ${y}`, {
+      left: 0,
+      top: 0,
+      stroke: 'black',
+      strokeWidth: 2,
+      fill: false,
+      selectable: false
+    })
+    path.opacity = 0
+    canvas.add(path)
+    path.animate('opacity', '1', {
+      duration: 300,
+      onChange: () => canvas.renderAll(),
+      onComplete: () => resolve(path)
+    })
+  })
 
+let hide = async elem =>
+  new Promise(resolve => {
+    elem.animate('opacity', '0', {
+      duration: 300,
+      onChange: () => canvas.renderAll(),
+      onComplete: () => {
+        canvas.remove(elem)
+        resolve()
+      }
+    })
+  })
+
+let swap = async (arr, i, j) => {
+  if (animPending) return;
+  animPending = true;
+  [arr[i], arr[j]] = [arr[j], arr[i]]
+  let e1 = arr[i > j ? i : j]
+  let e2 = arr[i > j ? j : i]
+  e1.rect.bringToFront()
+  e2.rect.bringToFront()
+  let b = await drawBesier(
+    e1.rect.left + e1.rect.width / 2,
+    e2.rect.left + e2.rect.width / 2,
+    canvas.height - 90)
+  let aniSwap = (e1, e2) =>
+    new Promise((resolve) => {
+      e1.rect.animate('top', e1.rect.top + 25, {
+        duration: 300,
+        onChange: () => canvas.renderAll(),
+        onComplete: () => e1.rect.animate('left', e2.rect.left, {
+          duration: Math.abs(i - j) * 900 / arr.length + 300,
+          onChange: () => canvas.renderAll(),
+          onComplete: () => e1.rect.animate('top', e1.rect.top - 25, {
+            duration: 300,
+            onChange: () => canvas.renderAll(),
+            onComplete: () => resolve()
+          })
+        })
+      })
+    })
+
+  await Promise.all([aniSwap(e1, e2), aniSwap(e2, e1)])
+  e1.rect.sendToBack()
+  e2.rect.sendToBack()
+  await hide(b)
+  animPending = false
+}
+arr = genArr(20)

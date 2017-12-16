@@ -214,21 +214,6 @@ let sortInterpreter = async gen => {
   document.querySelectorAll(".be").forEach(b => b.disabled = false)
 }
 
-let bubbleSort = function* (length) {
-  let swapped
-  do {
-    swapped = false;
-    for (let i = 0; i < length - 1; i++) {
-      let ai = yield {type:'eye', i, n: 0}
-      let ai1 = yield {type:'eye', i: i+1, n: 1}
-      if (ai > ai1) {
-        yield {type:'swap', i: i, j: i+1}
-        swapped = true
-      }
-    }
-  } while (swapped)
-}
-
 
 let createArr = () => {
   let size = document.querySelector("#arr").value
@@ -249,4 +234,19 @@ Object.entries(sorts).forEach(e =>{
 
 let changeSpeed = sp => {
   animationSpeed = 1/sp;
+}
+
+let bubbleSort = function* (length) {
+  let swapped
+  do {
+    swapped = false;
+    for (let i = 0; i < length - 1; i++) {
+      let ai = yield {type:'eye', i, n: 0}
+      let ai1 = yield {type:'eye', i: i+1, n: 1}
+      if (ai > ai1) {
+        yield {type:'swap', i: i, j: i+1}
+        swapped = true
+      }
+    }
+  } while (swapped)
 }

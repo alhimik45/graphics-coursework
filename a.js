@@ -63,7 +63,7 @@ class Elem {
   }
 }
 
-let genArr = count => {
+let genArr = (count, r) => {
   eyes = {}
   canvas.clear()
   let arr = []
@@ -72,7 +72,10 @@ let genArr = count => {
     let e = new Elem(count, n, colors)
     arr.push(e)
   })
-  arr = _.shuffle(arr)
+  if (r)
+    arr = _.reverse(arr)
+  else
+    arr = _.shuffle(arr)
   arr.forEach((e, i) => {
     e.rect.left = i * e.rect.width
     canvas.add(e.rect)
@@ -142,10 +145,13 @@ let swap = async (arr, i, j) => {
     e2.rect.left + e2.rect.width / 2,
     canvas.height - 470)
   let aniSwap = async (e1, e2) => {
-    if (animationSpeed >= 1 / 20)
+    let was = false
+    if (animationSpeed >= 1 / 20) {
       await move(e1.rect, 'top', e1.rect.top + 25, 300)
+      was =true
+    }
     await move(e1.rect, 'left', e2.rect.left, delayer(i, j))
-    if (animationSpeed >= 1 / 20)
+    if (animationSpeed >= 1 / 20 && was)
       await move(e1.rect, 'top', e1.rect.top - 25, 300)
   }
   await Promise.all([aniSwap(e1, e2), aniSwap(e2, e1)])
@@ -273,12 +279,12 @@ let sortInterpreter = async gen => {
   document.querySelectorAll(".be").forEach(b => b.disabled = false)
 }
 
-let createArr = () => {
+let createArr = (r) => {
   let size = document.querySelector("#arr").value
   if (size <= 0) {
     alert("Неверный размер!")
   }
-  arr = genArr(+size)
+  arr = genArr(+size, r)
 }
 
 let sorts = {

@@ -151,7 +151,7 @@ let swap = async (arr, i, j) => {
       was = true
     }
     await move(e1.rect, 'left', e2.rect.left, delayer(i, j))
-    if (animationSpeed >= 1 / 20 && was)
+    if (animationSpeed >= 1 / 20 || was)
       await move(e1.rect, 'top', e1.rect.top - 25, 300)
   }
   await Promise.all([aniSwap(e1, e2), aniSwap(e2, e1)])

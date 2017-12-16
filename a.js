@@ -89,14 +89,17 @@ let quadBesier = async (x1, x2, y) => {
     fill: false,
     selectable: false
   })
-  path.opacity = 0
+  if (animationSpeed >= 1 / 20)
+    path.opacity = 0
   canvas.add(path)
-  await move(path, 'opacity', 1, 300)
+  if (animationSpeed >= 1 / 20)
+    await move(path, 'opacity', 1, 300)
   return path
 }
 
 let hide = async elem => {
-  await move(elem, 'opacity', 0, 300)
+  if (animationSpeed >= 1 / 20)
+    await move(elem, 'opacity', 0, 300)
   canvas.remove(elem)
 }
 
@@ -104,6 +107,13 @@ let animationSpeed = 1
 
 let move = (e, meth, to, dur) =>
   new Promise(resolve => {
+    if (animationSpeed < 1 / 20) {
+      requestAnimationFrame(() => {
+        e[meth] = to
+        resolve()
+      })
+      return
+    }
     e.animate(meth, to, {
       duration: dur * animationSpeed,
       onChange: () => canvas.renderAll(),
@@ -132,9 +142,11 @@ let swap = async (arr, i, j) => {
     e2.rect.left + e2.rect.width / 2,
     canvas.height - 470)
   let aniSwap = async (e1, e2) => {
-    await move(e1.rect, 'top', e1.rect.top + 25, 300)
+    if (animationSpeed >= 1 / 20)
+      await move(e1.rect, 'top', e1.rect.top + 25, 300)
     await move(e1.rect, 'left', e2.rect.left, delayer(i, j))
-    await move(e1.rect, 'top', e1.rect.top - 25, 300)
+    if (animationSpeed >= 1 / 20)
+      await move(e1.rect, 'top', e1.rect.top - 25, 300)
   }
   await Promise.all([aniSwap(e1, e2), aniSwap(e2, e1)])
   e1.rect.sendToBack()
@@ -231,24 +243,27 @@ let sortInterpreter = async gen => {
     switch (val.type) {
       case 'eye':
         await eye(arr, val.i, val.n)
-        r = gen.next(arr[val.i].i)
-        break;
+        if (val.i >= 0)
+          r = gen.next(arr[val.i] && arr[val.i].i)
+        else
+          r = gen.next()
+        break
       case 'swap':
         await swap(arr, val.i, val.j)
         r = gen.next()
-        break;
+        break
       case 'move':
         await mover(arr, val.from, val.to)
         r = gen.next()
-        break;
+        break
       case 'stmp':
         await toTemp(arr, val.i)
         r = gen.next(tmp.i)
-        break;
+        break
       case 'ltmp':
         await fromTemp(arr, val.i)
         r = gen.next()
-        break;
+        break
     }
   }
   workHard = true
@@ -271,6 +286,7 @@ let sorts = {
   "Сортировка вставками": "insertionSort",
   "Сортировка выбором": "selectionSort",
   "Сортировка Шелла": "shellSort",
+  "Сортировка слиянием": "mergeSort",
 }
 
 Object.entries(sorts).forEach(e => {
@@ -279,13 +295,13 @@ Object.entries(sorts).forEach(e => {
 })
 
 let changeSpeed = sp => {
-  animationSpeed = 1 / sp;
+  animationSpeed = 1 / sp
 }
 
 let bubbleSort = function* (length) {
   let swapped
   do {
-    swapped = false;
+    swapped = false
     for (let i = 0; i < length - 1; i++) {
       let ai = yield { type: 'eye', i, n: 0 }
       let ai1 = yield { type: 'eye', i: i + 1, n: 1 }
@@ -304,7 +320,7 @@ let insertionSort = function* (len) {
     let uj = yield { type: 'eye', i: i - 1, n: 1 }
     for (var j = i - 1; j >= 0 && (uj > tmp);) {
       yield { type: 'move', from: j, to: j + 1 }
-      --j;
+      --j
       if (j >= 0)
         uj = yield { type: 'eye', i: j, n: 1 }
     }
@@ -318,13 +334,12 @@ let selectionSort = function* (len) {
 
   for (let i = 0; i < len; i++) {
 
-    min = i;
-
+    min = i
     for (let j = i + 1; j < len; j++) {
       let im = yield { type: 'eye', i: min, n: 0 }
-      let ij = yield { type: 'eye', i:j, n: 1 }
+      let ij = yield { type: 'eye', i: j, n: 1 }
       if (ij < im) {
-        min = j;
+        min = j
       }
     }
 
@@ -340,14 +355,104 @@ let shellSort = function* (len) {
       let j
       let k = yield { type: 'eye', i: i, n: 0 }
       k = yield { type: 'stmp', i: i }
-      let ajh = yield { type: 'eye', i: i-h, n: 1 }
-      for (j = i; j >= h && k < ajh; ) {
-        yield { type: 'move', from: j-h, to: j }
+      let ajh = yield { type: 'eye', i: i - h, n: 1 }
+      for (j = i; j >= h && k < ajh;) {
+        yield { type: 'move', from: j - h, to: j }
         j -= h
-        if(j>=h)
-          ajh = yield { type: 'eye', i: j-h, n: 1 }
+        if (j >= h)
+          ajh = yield { type: 'eye', i: j - h, n: 1 }
       }
       yield { type: 'ltmp', i: j }
     }
   }
+}
+
+let mergeSort = function* (len) {
+  let floor = Math.floor
+
+  function* lower (from, to, value) {
+    while (to > from) {
+      let middle = from + floor((to - from) / 2)
+      let am = yield { type: 'eye', i: middle, n: 1 }
+      if (am < value) {
+        from = middle + 1
+      } else {
+        to = middle
+      }
+    }
+    yield { type: 'eye', i: -1, n: 1 }
+    return from
+  }
+
+  function* upper (from, to, value) {
+    while (to > from) {
+      let middle = from + floor((to - from) / 2)
+      let am = yield { type: 'eye', i: middle, n: 1 }
+      if (value < am) {
+        to = middle
+      } else {
+        from = middle + 1
+      }
+    }
+    yield { type: 'eye', i: -1, n: 1 }
+    return from
+  }
+
+  function* reverse (from, to) {
+    --from
+    while (++from < --to) {
+      yield { type: 'eye', i: from, n: 2 }
+      yield { type: 'eye', i: to, n: 3 }
+      yield { type: 'swap', i: from, j: to }
+    }
+    yield { type: 'eye', i: -1, n: 2 }
+    yield { type: 'eye', i: -1, n: 3 }
+  }
+
+  function* rotate (from, pivot, to) {
+    if (from < pivot && pivot < to) {
+      yield* reverse(from, pivot)
+      yield* reverse(pivot, to)
+      yield* reverse(from, to)
+    }
+  }
+
+  function* merge (from, pivot, to) {
+    if (pivot == 10)
+      debugger;
+    let ap = yield { type: 'eye', i: pivot, n: 0 }
+    let ap1 = yield { type: 'eye', i: pivot - 1, n: 0 }
+    if (from < pivot && pivot < to && ap < ap1) {
+      if (to - from === 2) {
+        yield* reverse(from, to)
+      } else {
+        let firstCut = 0
+        let secondCut = 0
+        if (pivot - from > to - pivot) {
+          firstCut = from + floor((pivot - from) / 2)
+          let af = yield { type: 'eye', i: firstCut, n: 0 }
+          secondCut = yield* lower(pivot, to, af)
+        } else {
+          secondCut = pivot + floor((to - pivot) / 2)
+          let as = yield { type: 'eye', i: secondCut, n: 0 }
+          firstCut = yield* upper(from, pivot, as)
+        }
+        yield* rotate(firstCut, pivot, secondCut)
+        let middle = secondCut - pivot + firstCut
+        yield* merge(middle, secondCut, to)
+        yield* merge(from, firstCut, middle)
+      }
+    }
+  }
+
+  function* mergeSort (from, to) {
+    if (to - from > 1) {
+      let middle = from + floor((to - from) / 2)
+      yield* mergeSort(from, middle)
+      yield* mergeSort(middle, to)
+      yield* merge(from, middle, to)
+    }
+  }
+
+  yield *mergeSort(0, len)
 }

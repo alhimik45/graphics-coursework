@@ -155,11 +155,11 @@ let fromTemp = async (arr, i) => {
   tmp.rect.bringToFront()
   let ll = i * tmp.rect.width
   let b
-  if(tmpI !== i)
-  b = await quadBesier(
-    ll + tmp.rect.width / 2,
-    tmp.rect.left + tmp.rect.width / 2,
-    canvas.height - 470)
+  if (tmpI !== i)
+    b = await quadBesier(
+      ll + tmp.rect.width / 2,
+      tmp.rect.left + tmp.rect.width / 2,
+      canvas.height - 470)
   await move(tmp.rect, 'left', ll, delayer(tmpI, i))
   await move(tmp.rect, 'top', tmp.rect.top + 300, 500)
   tmp.rect.sendToBack()
@@ -269,6 +269,7 @@ let createArr = () => {
 let sorts = {
   "Пузырьковая сортировка": "bubbleSort",
   "Сортировка вставками": "insertionSort",
+  "Сортировка выбором": "selectionSort",
 }
 
 Object.entries(sorts).forEach(e => {
@@ -307,5 +308,27 @@ let insertionSort = function* (len) {
         uj = yield { type: 'eye', i: j, n: 1 }
     }
     yield { type: 'ltmp', i: j + 1 }
+  }
+}
+
+let selectionSort = function* (len) {
+
+  let min
+
+  for (let i = 0; i < len; i++) {
+
+    min = i;
+
+    for (let j = i + 1; j < len; j++) {
+      let im = yield { type: 'eye', i: min, n: 0 }
+      let ij = yield { type: 'eye', i:j, n: 1 }
+      if (ij < im) {
+        min = j;
+      }
+    }
+
+    if (i !== min) {
+      yield { type: 'swap', i: i, j: min }
+    }
   }
 }

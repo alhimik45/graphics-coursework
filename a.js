@@ -467,7 +467,7 @@ let quickSort = function* (len) {
   function* quicksort (left, right) {
 
     if (left < right) {
-      let pivot = yield { type: 'eye', i: left + Math.floor((right - left) / 2), n: 0 }
+      let pivot = yield { type: 'eye', i: left + Math.floor((right - left) / 2), n: 2 }
       let left_new = left,
         right_new = right
 
